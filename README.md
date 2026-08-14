@@ -134,9 +134,3 @@ Toggles do job/notebook `99_cleanup`: `delete_csv_files`, `drop_tables`,
 | `run_id` | string | id do run (timestamp) |
 | `engine` | string | `spark-notebook:serial` / `...:parallel(c=N)` ou `warehouse:<id>:...` |
 | `run_ts` | timestamp | quando rodou |
-
-## Notas de custo
-
-- SF1000 gera **~900 GB de CSV** no Volume — rode a limpeza quando terminar.
-- As queries vêm do repositório `apache/spark` (`sql/core/src/test/resources/tpcds/`),
-  já em Spark SQL. São 103 arquivos (99 queries + variantes `a`/`b`: q14, q23, q24, q39).
