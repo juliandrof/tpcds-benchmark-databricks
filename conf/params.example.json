@@ -1,0 +1,10 @@
+{
+  "profile": "<seu-profile-cli>",
+  "catalog": "main",
+  "schema": "tpcds_bench",
+  "volume": "tpcds_data",
+  "csv_subdir": "csv",
+  "source_schema": "samples.tpcds_sf1000",
+  "warehouse_id": "<warehouse-id>",
+  "notebook_base": "/Workspace/Users/voce@empresa.com/tpcds-benchmark-databricks/notebooks"
+}

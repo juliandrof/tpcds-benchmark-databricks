@@ -1,0 +1,123 @@
+bundle:
+  name: tpcds-benchmark
+
+variables:
+  catalog:
+    description: Catalog destino
+    default: main
+  schema:
+    description: Schema das tabelas TPC-DS (Volume + tabelas)
+    default: tpcds_bench
+  results_schema:
+    description: Schema onde fica a tabela bench_results (vazio = mesmo do schema)
+    default: ""
+  volume:
+    description: Nome do Volume dos CSVs
+    default: tpcds_data
+  csv_subdir:
+    default: csv
+  source_schema:
+    description: Schema TPC-DS de origem
+    default: samples.tpcds_sf1000
+  warehouse_id:
+    description: SQL warehouse p/ rodar as queries (vazio = spark do notebook)
+    default: ""
+  concurrency:
+    description: Concorrencia do job paralelo
+    default: "103"
+
+targets:
+  dev:
+    mode: development
+    default: true
+    # host herdado do profile do CLI (databricks bundle deploy -p <profile>)
+    variables:
+      # Ajuste ao seu ambiente. Exemplos:
+      # schema: tpcds_sf1000              # schema onde ficam as tabelas TPC-DS
+      # results_schema: bench             # schema separado p/ a bench_results (opcional)
+      # warehouse_id: <warehouse-id>      # SQL warehouse p/ rodar as queries (vazio = spark serverless)
+      schema: tpcds_bench
+
+resources:
+  jobs:
+
+    tpcds_pipeline:
+      name: tpcds-benchmark-pipeline
+      max_concurrent_runs: 1
+      queue: {enabled: true}
+      tasks:
+        - task_key: export
+          notebook_task:
+            notebook_path: ./notebooks/00_export_csv.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              csv_subdir: ${var.csv_subdir}
+              source_schema: ${var.source_schema}
+        - task_key: create_tables
+          depends_on: [{task_key: export}]
+          notebook_task:
+            notebook_path: ./notebooks/01_create_tables.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              source_schema: ${var.source_schema}
+        - task_key: load
+          depends_on: [{task_key: create_tables}]
+          notebook_task:
+            notebook_path: ./notebooks/02_load_copy_into.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              csv_subdir: ${var.csv_subdir}
+
+    tpcds_benchmark_serial:
+      name: tpcds-benchmark-serial
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: benchmark_serial
+          notebook_task:
+            notebook_path: ./notebooks/03_run_benchmark.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              results_schema: ${var.results_schema}
+              warehouse_id: ${var.warehouse_id}
+              execution_mode: serial
+              mode: append
+
+    tpcds_benchmark_parallel:
+      name: tpcds-benchmark-parallel
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: benchmark_parallel
+          notebook_task:
+            notebook_path: ./notebooks/03_run_benchmark.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              results_schema: ${var.results_schema}
+              warehouse_id: ${var.warehouse_id}
+              execution_mode: parallel
+              concurrency: ${var.concurrency}
+              mode: append
+
+    tpcds_cleanup:
+      name: tpcds-benchmark-cleanup
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: cleanup
+          notebook_task:
+            notebook_path: ./notebooks/99_cleanup.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              csv_subdir: ${var.csv_subdir}
+              delete_csv_files: "true"
+              drop_tables: "true"
+              drop_bench_results: "false"
+              drop_volume: "false"
+              drop_schema: "false"

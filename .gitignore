@@ -1,0 +1,6 @@
+# resultados/artefatos locais
+*.log
+bench_results.csv
+conf/params.json
+.DS_Store
+__pycache__/
