@@ -8,6 +8,61 @@ os tempos numa tabela `bench_results`.
 Tudo é **parametrizado** por `catalog` e `schema` — Volume, tabelas e `bench_results`
 ficam todos no mesmo schema.
 
+## 🤖 Prompt de execução (para um agente de IA)
+
+> Copie o bloco abaixo (ou aponte seu agente para esta URL). Ele contém tudo o que é
+> necessário para rodar o benchmark completo de ponta a ponta.
+
+```text
+Você é um agente com acesso ao Databricks CLI. Rode o benchmark TPC-DS deste repositório
+(https://github.com/juliandrof/tpcds-benchmark-databricks) de ponta a ponta.
+
+CONTEXTO
+- Este repo é um Databricks Asset Bundle (databricks.yml) que cria 4 jobs serverless:
+  tpcds_pipeline (export CSV -> DDL -> COPY INTO), tpcds_benchmark_serial,
+  tpcds_benchmark_parallel e tpcds_cleanup.
+- Fonte dos dados: samples.tpcds_sf1000 (TPC-DS 1 TB, já disponível no catálogo `samples`).
+  Para 1 GB use samples.tpcds_sf1 (parâmetro source_schema).
+- As 99 queries (103 arquivos) estão em queries/ e são lidas do próprio repo.
+
+PARÂMETROS (peça ao usuário ou use defaults)
+- profile        : profile do Databricks CLI já autenticado (ex.: meu-profile)
+- catalog        : catálogo destino (ex.: main)
+- schema         : schema destino p/ Volume + tabelas (ex.: tpcds_bench)
+- source_schema  : samples.tpcds_sf1000 (1 TB) ou samples.tpcds_sf1 (1 GB)
+- warehouse_id   : (opcional) SQL warehouse p/ rodar as queries; vazio = compute serverless
+- concurrency    : concorrência do job paralelo (ex.: 103)
+
+PASSOS
+1. Autentique se necessário:
+   databricks auth login --host <host-do-workspace> --profile <profile>
+2. Clone o repo localmente e entre nele:
+   git clone https://github.com/juliandrof/tpcds-benchmark-databricks && cd tpcds-benchmark-databricks
+3. Valide e faça deploy do bundle (cria os 4 jobs no workspace):
+   databricks bundle validate -t dev -p <profile>
+   databricks bundle deploy   -t dev -p <profile> \
+     --var catalog=<catalog> --var schema=<schema> --var source_schema=<source_schema> \
+     --var warehouse_id=<warehouse_id> --var concurrency=<concurrency>
+4. Prepare os dados (export CSV -> cria tabelas -> COPY INTO). Demora bastante no SF1000:
+   databricks bundle run tpcds_pipeline -t dev -p <profile>
+5. Rode o benchmark serial e o paralelo:
+   databricks bundle run tpcds_benchmark_serial   -t dev -p <profile>
+   databricks bundle run tpcds_benchmark_parallel -t dev -p <profile>
+6. Reporte os resultados consultando a tabela <catalog>.<schema>.bench_results:
+   SELECT engine, run_id, count(*) queries, round(sum(seconds),1) soma_s,
+          round(avg(seconds),2) avg_s, round(max(seconds),2) max_s
+   FROM <catalog>.<schema>.bench_results GROUP BY engine, run_id ORDER BY run_id DESC;
+7. (Opcional) Ao terminar, libere storage rodando a limpeza:
+   databricks bundle run tpcds_cleanup -t dev -p <profile>
+
+REGRAS
+- Nunca comite segredos/tokens. Não versione dados.
+- Verifique cada job terminar com sucesso (state=TERMINATED, code=SUCCESS) antes do próximo.
+- Se um COPY INTO falhar com DELTA_FAILED_TO_MERGE_FIELDS, confirme que está usando o
+  notebook 02_load_copy_into (que faz CAST explícito) — não um COPY INTO de CSV sem cast.
+- Ao final, entregue um resumo: nº de queries ok/falhas, tempo total serial vs paralelo.
+```
+
 ## Estrutura
 
 ```
