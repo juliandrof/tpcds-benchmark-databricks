@@ -4,10 +4,10 @@ bundle:
 variables:
   catalog:
     description: Catalog destino
-    default: main
+    default: bench_databricks
   schema:
     description: Schema das tabelas TPC-DS (Volume + tabelas)
-    default: tpcds_bench
+    default: tpcds
   results_schema:
     description: Schema onde fica a tabela bench_results (vazio = mesmo do schema)
     default: ""
@@ -19,9 +19,18 @@ variables:
   source_schema:
     description: Schema TPC-DS de origem
     default: samples.tpcds_sf1000
-  warehouse_id:
-    description: SQL warehouse p/ rodar as queries (vazio = spark do notebook)
-    default: ""
+  warehouse_name:
+    description: Nome do SQL warehouse usado nas queries (criado se nao existir)
+    default: bench_tpcds
+  warehouse_size:
+    description: Tamanho do SQL warehouse
+    default: Large
+  warehouse_min:
+    description: Min de clusters (autoscale)
+    default: "1"
+  warehouse_max:
+    description: Max de clusters (autoscale)
+    default: "10"
   concurrency:
     description: Concorrencia do job paralelo
     default: "103"
@@ -31,12 +40,6 @@ targets:
     mode: development
     default: true
     # host herdado do profile do CLI (databricks bundle deploy -p <profile>)
-    variables:
-      # Ajuste ao seu ambiente. Exemplos:
-      # schema: tpcds_sf1000              # schema onde ficam as tabelas TPC-DS
-      # results_schema: bench             # schema separado p/ a bench_results (opcional)
-      # warehouse_id: <warehouse-id>      # SQL warehouse p/ rodar as queries (vazio = spark serverless)
-      schema: tpcds_bench
 
 resources:
   jobs:
@@ -84,7 +87,10 @@ resources:
               catalog: ${var.catalog}
               schema: ${var.schema}
               results_schema: ${var.results_schema}
-              warehouse_id: ${var.warehouse_id}
+              warehouse_name: ${var.warehouse_name}
+              warehouse_size: ${var.warehouse_size}
+              warehouse_min: ${var.warehouse_min}
+              warehouse_max: ${var.warehouse_max}
               execution_mode: serial
               mode: append
 
@@ -99,7 +105,10 @@ resources:
               catalog: ${var.catalog}
               schema: ${var.schema}
               results_schema: ${var.results_schema}
-              warehouse_id: ${var.warehouse_id}
+              warehouse_name: ${var.warehouse_name}
+              warehouse_size: ${var.warehouse_size}
+              warehouse_min: ${var.warehouse_min}
+              warehouse_max: ${var.warehouse_max}
               execution_mode: parallel
               concurrency: ${var.concurrency}
               mode: append
@@ -116,8 +125,10 @@ resources:
               schema: ${var.schema}
               volume: ${var.volume}
               csv_subdir: ${var.csv_subdir}
+              warehouse_name: ${var.warehouse_name}
               delete_csv_files: "true"
               drop_tables: "true"
               drop_bench_results: "false"
               drop_volume: "false"
               drop_schema: "false"
+              drop_warehouse: "true"

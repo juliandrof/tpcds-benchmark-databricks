@@ -7,8 +7,8 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("catalog", "main", "Catalog destino")
-dbutils.widgets.text("schema", "tpcds_bench", "Schema destino")
+dbutils.widgets.text("catalog", "bench_databricks", "Catalog destino")
+dbutils.widgets.text("schema", "tpcds", "Schema destino")
 dbutils.widgets.text("source_schema", "samples.tpcds_sf1000", "Schema TPC-DS de origem")
 
 CATALOG = dbutils.widgets.get("catalog")

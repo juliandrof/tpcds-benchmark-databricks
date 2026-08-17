@@ -8,8 +8,8 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("catalog", "main", "Catalog")
-dbutils.widgets.text("schema", "tpcds_bench", "Schema")
+dbutils.widgets.text("catalog", "bench_databricks", "Catalog")
+dbutils.widgets.text("schema", "tpcds", "Schema")
 dbutils.widgets.text("volume", "tpcds_data", "Volume")
 dbutils.widgets.text("csv_subdir", "csv", "Subpasta dos CSVs")
 dbutils.widgets.dropdown("delete_csv_files", "true",  ["true", "false"], "Deletar arquivos CSV")
@@ -17,11 +17,14 @@ dbutils.widgets.dropdown("drop_tables",      "true",  ["true", "false"], "Dropar
 dbutils.widgets.dropdown("drop_bench_results","false",["true", "false"], "Dropar tabela bench_results")
 dbutils.widgets.dropdown("drop_volume",      "false", ["true", "false"], "Dropar o Volume")
 dbutils.widgets.dropdown("drop_schema",      "false", ["true", "false"], "Dropar o Schema inteiro")
+dbutils.widgets.text("warehouse_name", "bench_tpcds", "Nome do SQL warehouse a deletar")
+dbutils.widgets.dropdown("drop_warehouse",   "true",  ["true", "false"], "Deletar o SQL warehouse")
 
 CATALOG = dbutils.widgets.get("catalog")
 SCHEMA  = dbutils.widgets.get("schema")
 VOLUME  = dbutils.widgets.get("volume")
 CSV_SUB = dbutils.widgets.get("csv_subdir").strip("/")
+WNAME   = dbutils.widgets.get("warehouse_name").strip()
 def flag(w): return dbutils.widgets.get(w) == "true"
 
 CSV_DIR = f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME}/{CSV_SUB}"
@@ -66,5 +69,22 @@ if flag("drop_volume"):
 if flag("drop_schema"):
     spark.sql(f"DROP SCHEMA IF EXISTS {FQ} CASCADE")
     print(f"[drop schema] {FQ} (CASCADE)")
+
+# COMMAND ----------
+
+# 4) SQL warehouse (deleta por nome)
+if flag("drop_warehouse") and WNAME:
+    from databricks.sdk import WorkspaceClient
+    w = WorkspaceClient()
+    achou = False
+    for e in w.warehouses.list():
+        if e.name == WNAME:
+            w.warehouses.delete(id=e.id)
+            print(f"[drop warehouse] {WNAME} (id={e.id})")
+            achou = True
+    if not achou:
+        print(f"[drop warehouse] nenhum warehouse chamado '{WNAME}'")
+else:
+    print("[skip] drop_warehouse=false ou warehouse_name vazio")
 
 print("\nLimpeza concluida.")

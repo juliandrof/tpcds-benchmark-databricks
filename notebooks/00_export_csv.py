@@ -9,8 +9,8 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("catalog", "main", "Catalog destino")
-dbutils.widgets.text("schema", "tpcds_bench", "Schema destino (volume+tabelas+bench_results)")
+dbutils.widgets.text("catalog", "bench_databricks", "Catalog destino")
+dbutils.widgets.text("schema", "tpcds", "Schema destino (volume+tabelas+bench_results)")
 dbutils.widgets.text("volume", "tpcds_data", "Nome do Volume")
 dbutils.widgets.text("csv_subdir", "csv", "Subpasta dentro do volume p/ os CSVs")
 dbutils.widgets.text("source_schema", "samples.tpcds_sf1000", "Schema TPC-DS de origem")

@@ -1,7 +1,7 @@
 {
   "profile": "<seu-profile-cli>",
-  "catalog": "main",
-  "schema": "tpcds_bench",
+  "catalog": "bench_databricks",
+  "schema": "tpcds",
   "volume": "tpcds_data",
   "csv_subdir": "csv",
   "source_schema": "samples.tpcds_sf1000",

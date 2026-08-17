@@ -9,7 +9,7 @@ Mede o tempo de cada query E o tempo total do lote (wall clock), e grava em
 Uso:
   python scripts/run_bench_parallel.py \
       --profile fe-vm-jsf-demo --warehouse-id <id> \
-      --catalog main --schema tpcds_bench \
+      --catalog bench_databricks --schema tpcds \
       --concurrency 10 [--only q1,q3] [--mode append|overwrite]
 """
 import subprocess, json, time, glob, os, argparse, datetime

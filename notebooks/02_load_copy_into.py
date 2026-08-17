@@ -8,8 +8,8 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("catalog", "main", "Catalog destino")
-dbutils.widgets.text("schema", "tpcds_bench", "Schema destino")
+dbutils.widgets.text("catalog", "bench_databricks", "Catalog destino")
+dbutils.widgets.text("schema", "tpcds", "Schema destino")
 dbutils.widgets.text("volume", "tpcds_data", "Nome do Volume")
 dbutils.widgets.text("csv_subdir", "csv", "Subpasta dos CSVs")
 dbutils.widgets.text("only_tables", "", "Somente estas tabelas (csv), vazio=todas")

@@ -24,14 +24,17 @@ CONTEXTO
 - Fonte dos dados: samples.tpcds_sf1000 (TPC-DS 1 TB, já disponível no catálogo `samples`).
   Para 1 GB use samples.tpcds_sf1 (parâmetro source_schema).
 - As 99 queries (103 arquivos) estão em queries/ e são lidas do próprio repo.
+- As queries rodam SEMPRE num SQL warehouse chamado `bench_tpcds` (size Large, serverless,
+  autoscale 1-10) — o job de benchmark cria esse warehouse se ele não existir, e o job de
+  cleanup o deleta.
 
-PARÂMETROS (peça ao usuário ou use defaults)
+PARÂMETROS (use os defaults, salvo pedido do usuário)
 - profile        : profile do Databricks CLI já autenticado (ex.: meu-profile)
-- catalog        : catálogo destino (ex.: main)
-- schema         : schema destino p/ Volume + tabelas (ex.: tpcds_bench)
+- catalog        : default bench_databricks
+- schema         : default tpcds  (Volume + tabelas + bench_results)
 - source_schema  : samples.tpcds_sf1000 (1 TB) ou samples.tpcds_sf1 (1 GB)
-- warehouse_id   : (opcional) SQL warehouse p/ rodar as queries; vazio = compute serverless
-- concurrency    : concorrência do job paralelo (ex.: 103)
+- warehouse_name : default bench_tpcds  (SQL warehouse Large, autoscale 1-10)
+- concurrency    : concorrência do job paralelo (default 103)
 
 PASSOS
 1. Autentique se necessário:
@@ -40,9 +43,8 @@ PASSOS
    git clone https://github.com/juliandrof/tpcds-benchmark-databricks && cd tpcds-benchmark-databricks
 3. Valide e faça deploy do bundle (cria os 4 jobs no workspace):
    databricks bundle validate -t dev -p <profile>
-   databricks bundle deploy   -t dev -p <profile> \
-     --var catalog=<catalog> --var schema=<schema> --var source_schema=<source_schema> \
-     --var warehouse_id=<warehouse_id> --var concurrency=<concurrency>
+   databricks bundle deploy   -t dev -p <profile>
+   # (opcional) sobrescreva defaults: --var catalog=<c> --var schema=<s> --var source_schema=<ss>
 4. Prepare os dados (export CSV -> cria tabelas -> COPY INTO). Demora bastante no SF1000:
    databricks bundle run tpcds_pipeline -t dev -p <profile>
 5. Rode o benchmark serial e o paralelo:
@@ -107,13 +109,16 @@ tpcds-benchmark-databricks/
 
 O repo é um **Databricks Asset Bundle** (`databricks.yml`): o `deploy` sobe os notebooks
 e a pasta `queries/` para o workspace e cria os 4 jobs. Parametrização via `variables`
-(catalog, schema, results_schema, volume, source_schema, warehouse_id, concurrency);
-o target `dev` já traz defaults do ambiente atual.
+(catalog, schema, results_schema, volume, source_schema, warehouse_name, warehouse_size,
+warehouse_min/max, concurrency).
 
-### 1. Ajustar os parâmetros
-Edite as `variables` em `databricks.yml` (ou o bloco `targets.dev.variables`) para o seu
-`catalog` / `schema` / `warehouse_id`. Deixe `warehouse_id` vazio para rodar as queries no
-compute serverless do notebook, ou informe um SQL warehouse.
+Defaults: `catalog=bench_databricks`, `schema=tpcds`. As queries rodam num SQL warehouse
+`bench_tpcds` (Large, serverless, autoscale 1→10) — **criado automaticamente** pelo job de
+benchmark se não existir, e **deletado** pelo job de cleanup.
+
+### 1. Ajustar os parâmetros (opcional)
+Edite as `variables` em `databricks.yml` se quiser outro `catalog` / `schema` /
+`warehouse_name` / tamanho do warehouse. Os defaults já funcionam de imediato.
 
 ### 2. Deployar o bundle
 ```bash
@@ -148,7 +153,7 @@ ORDER BY seconds DESC LIMIT 10;
 ```bash
 python scripts/run_bench_warehouse.py \
   --profile <perfil> --warehouse-id <id> \
-  --catalog main --schema tpcds_bench --mode append
+  --catalog bench_databricks --schema tpcds --mode append
 ```
 
 ### 5b. (Opcional) Teste de execução PARALELA
@@ -159,7 +164,7 @@ Submete as 103 queries concorrentemente para medir concorrência/throughput do w
 ```bash
 python scripts/run_bench_parallel.py \
   --profile <perfil> --warehouse-id <id> \
-  --catalog main --schema tpcds_bench \
+  --catalog bench_databricks --schema tpcds \
   --concurrency 10 --mode append
 ```
 Grava em `bench_results` com `engine = warehouse:<id>:parallel(c=N)`, permitindo comparar

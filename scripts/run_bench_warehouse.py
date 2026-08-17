@@ -7,7 +7,7 @@ Alternativa ao notebook 03 quando se quer medir num SQL warehouse especifico
 Uso:
   python scripts/run_bench_warehouse.py \
       --profile fe-vm-jsf-demo --warehouse-id <id> \
-      --catalog main --schema tpcds_bench \
+      --catalog bench_databricks --schema tpcds \
       [--only q1,q3] [--mode append|overwrite]
 """
 import subprocess, json, time, glob, os, argparse, datetime
